@@ -1,0 +1,71 @@
+blueprint:
+  name: Warm/Koud weer
+  description: "Schakel een helper die gebruikt wordt in een andere automatisatie. 
+    Deze helper geef weer of het warm of koud weer is. \n Als het koud weer is, zal 
+    enkel de ♨️verwarming♨️ gebruikt worden en de koeling niet. \n Als het warm 
+    weer is, zal enkel de ❄️koeling❄️ gebruikt worden en de verwarming niet."
+  domain: automation
+  input:
+    input_trigger_frequency:
+      name: "⏱️Trigger Frequentie⏱️"
+      description:
+        "Geef een tijdsinterval mee. Dit moet altijd starten met `'/'.` Het cijfer
+        dat geeft het aantal minuten weer. Dit wil zeggen dat deze automatisatie 
+        om de `X` aantal minuten zal worden uitgevoerd."
+      default: "/10"
+      selector:
+        text:
+
+    input_temperature:
+      name: "🌡️Temperatuur Drempelwaarde🌡️"
+      description: "Geef een drempelwaarde voor de temperatuur mee. \n Als de 
+      buitentemperatuur BOVEN deze drempelwaarde ligt, zal het worden beschouwd 
+      als 🔥`warm` weer. \n \n Als de buitentemperatuur ONDER deze drempelwaarde ligt, 
+      zal het worden beschouwd als ❄️`koud` weer."
+      default: 20
+      selector:
+        number:
+          min: 4.0
+          max: 75.0
+          step: 0.5
+          mode: box
+          unit_of_measurement: "°C"
+
+    input_helper:
+      name: "🔧Helper🔧"
+      description: "❗Maak eerst een helper aan die gebruikt kan worden voor het 
+      weergeven als het warm of koud weer is. Dit doe je als volgt: `instellingen -> apparaten en diensten -> helpers -> 
+      helper aanmaken -> schakelaar -> geef een passende naam in`❗"
+      selector:
+        entity:
+          multiple: false
+
+trigger:
+  platform: time_pattern
+  id: temp_update
+  minutes: !input input_trigger_frequency
+
+variables:
+  input_temperature_user: !input input_temperature
+  input_helper_user: !input input_helper
+
+condition: []
+
+action:
+  - variables:
+      current_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+  - choose:
+      - conditions:
+          - "{{ current_temp > input_temperature_user}}"
+        sequence:
+          - service: input_boolean.turn_off
+            target:
+              entity_id:
+                - input_helper_user
+      - conditions:
+          - "{{ current_temp <= input_temperature_user}}"
+        sequence:
+          - service: input_boolean.turn_on
+            target:
+              entity_id:
+                - input_helper_user
