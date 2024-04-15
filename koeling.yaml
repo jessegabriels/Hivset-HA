@@ -82,7 +82,7 @@ variables:
   min_temperature_user: !input input_minimum_temperature
   current_temp: !input input_tempsensor
   winter: !input input_winter
-  outside_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+  outside_temp: "{{ state_attr('weather.forecast_apostoliekenstraat', 'temperature') }}"
 
 action:
   - alias: "Koeling"
