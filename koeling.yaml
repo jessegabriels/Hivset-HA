@@ -1,0 +1,127 @@
+blueprint:
+  name: Koeling
+  description: "Als het zomers/warm weer is, moet de ❄️koeling❄️ aan gaan op basis van 
+  de temperatuur. In de automatisatie `'Warm/Koud weer'` heb je bepaald vanaf welke 
+  temperatuur het zomers/warm weer is. Deze kan je steeds aanpassen door op de 
+  automatisatie te klikken en `🌡️Temperatuur Drempelwaarde🌡️` aan te passen."
+  domain: automation
+  input:
+    input_trigger_frequency:
+      name: "⏱️ Trigger Frequentie ⏱️"
+      description: "Geef een tijdsinterval mee. Dit moet altijd starten met `'/'.` Het cijfer
+        dat geeft het aantal minuten weer. Dit wil zeggen dat deze automatisatie 
+        om de `X` aantal minuten zal worden uitgevoerd."
+      default: "/10"
+      selector:
+        text:
+
+    input_maximum_temperature:
+      name: "🔥 Maximum temperatuur 🔥"
+      description:
+        "Geef de maximum temperatuur mee. Als de temperatuur boven dit getal gaat, zal 
+        de koeling aan gaan."
+      default: 25
+      selector:
+        number:
+          min: 12.0
+          max: 40.0
+          step: 0.5
+          mode: box
+          unit_of_measurement: "°C"
+
+    input_minimum_temperature:
+      name: "❄️ Minimum temperatuur ❄️"
+      description:
+        "Geef de minimum temperatuur mee. Als de temperatuur onder dit getal zakt, zal
+        de koeling uit gaan."
+      default: 12
+      selector:
+        number:
+          min: 6.0
+          max: 25.0
+          step: 0.5
+          mode: box
+          unit_of_measurement: "°C"
+
+    input_tempsensor:
+      name: "🌡️ Temperatuur sensor 🌡️"
+      description:
+        "Selecteer het apparaat dat de temperatuur meet in een lokaal.
+        De naam van dit apparaat start met `TH Origin` en eindigt op `SI7021 Temperature`."
+      selector:
+        entity:
+          multiple: false
+
+    input_cooling:
+      name: "❄️ Koeling schakelaar ❄️"
+      description: "Selecteer het apparaat dat de koeling aan of uit zet. 
+      Dit start met `switch.th_` of `switch.4CH`"
+      selector:
+        entity:
+          multiple: false
+
+    input_winter:
+      name: "🌞-☃️ Warm/Koud weer"
+      description:
+        "Warm/Koud weer entiteit dat weergeeft of het buiten zomers of winters weer is.
+        Dit is de helper die eerder is aangemaakt. Geef hier de naam van de juiste helper mee."
+      selector:
+        entity:
+          multiple: false
+
+
+trigger:
+  platform: time_pattern
+  id: temp_update
+  minutes: !input input_trigger_frequency
+
+condition: []
+
+variables:
+  max_temperature_user: !input input_maximum_temperature
+  min_temperature_user: !input input_minimum_temperature
+  current_temp: !input input_tempsensor
+  winter: !input input_winter
+  outside_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+
+action:
+  - alias: "Koeling"
+    choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ states(current_temp) | float > max_temperature_user }}"
+              - condition: template
+                value_template: "{{ is_state(winter, 'off') }}"
+              - condition: template
+                value_template: "{{ outside_temp < states(current_temp) | float }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input input_cooling
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ states(current_temp) | float < min_temperature_user }}"
+              - condition: template
+                value_template: "{{ is_state(winter, 'off') }}"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input input_cooling
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ states(current_temp) | float > max_temperature_user }}"
+              - condition: template
+                value_template: "{{ is_state(winter, 'off') }}"
+              - condition: template
+                value_template: "{{ outside_temp > states(current_temp) | float }}"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input input_cooling
+      
