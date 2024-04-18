@@ -10,21 +10,9 @@ blueprint:
   domain: automation
   # Configure all the inputs, these will display on the screen when the blueprint is selected
   input:
-    # Ask user for a number that indicates when the automation should run. This is done with minutes
-    input_trigger_frequency:
-      name: "⏱️ Trigger Frequentie ⏱️"
-      description: "Geef een tijdsinterval mee. Dit moet altijd starten met `'/'.` Het cijfer
-        dat geeft het aantal minuten weer. Dit wil zeggen dat deze automatisatie 
-        om de `X` aantal minuten zal worden uitgevoerd."
-      #default to run every 10 minutes
-      default: "/10"
-      # Input needs a text as input
-      selector:
-        text:
-    
     # Ask user for the maximum temperature it can be in a room
     input_maximum_temperature:
-      name: "🔥 Maximum temperatuur 🔥"
+      name: "🔥 Maximum Temperatuur 🔥"
       description:
         "Geef de maximum temperatuur mee. Als de temperatuur boven dit getal gaat, zal 
         de verwarming uit gaan."
@@ -42,7 +30,7 @@ blueprint:
     
     # Ask user for the minimum temperature it can be in a room when there is no school
     input_minimum_temperature:
-      name: "❄️ Minimum temperatuur ❄️"
+      name: "❄️ Minimum Temperatuur ❄️"
       description:
         "Geef de minimum temperatuur mee. Als de temperatuur onder dit getal zakt, zal
         de verwarming aan gaan. ⚠️ Dit is enkel voor als het GEEN SCHOOL is. ⚠️ "
@@ -60,7 +48,7 @@ blueprint:
 
     # Aks user for the minimum temperature it can be in a room when there is school
     input_minimum_temperature_school:
-      name: "❄️ 🏫 Minimum temperatuur school 🏫 ❄️"
+      name: "❄️ 🏫 Minimum Temperatuur School 🏫 ❄️"
       description:
         "Geef de minimum temperatuur mee. Als de temperatuur onder dit getal zakt, zal
         de verwarming aan gaan. ⚠️ Dit is enkel voor als het WEL SCHOOL is. ⚠️ "
@@ -79,7 +67,7 @@ blueprint:
     # Ask user for the right temperature sensor. With Hivset this starts with
     # "TH Origin"
     input_tempsensor:
-      name: "🌡️ Temperatuur sensor 🌡️"
+      name: "🌡️ Temperatuur Sensor 🌡️"
       description: "Selecteer het apparaat dat de temperatuur meet in een lokaal.
         De naam van dit apparaat start met `TH Origin` en eindigt op `SI7021 Temperature`."
       # Input requires a single entity from a dropdown menu.
@@ -90,7 +78,7 @@ blueprint:
     # Ask user for the right switch that operates the heating. With Hivset this
     # starts with "switch.th_"
     input_heating:
-      name: "♨️ Verwarming schakelaar ♨️"
+      name: "♨️ Verwarming Schakelaar ♨️"
       description: "Selecteer het apparaat dat de verwarming aan of uit zet. 
       Dit start met `switch.th_` of `switch.4CH`"
       # Input requires a single entity from a dropdown menu.
@@ -101,24 +89,25 @@ blueprint:
     # Ask user for the right entity that represents if it is school or not.
     # This entity is a helper that is assigned by an other automation that is 
     # synced with the Google Calendar of Hivset
-    input_school:
-      name: "🏫 School 🏫"
-      description: "Selecteer de entiteit dat weergeeft of het school is of niet
-        De entiteit start met `input_boolean.school`."
-      # Input requires a single entity from a dropdown menu.
-      selector:
-        entity:
-          multiple: false
+
+    #input_school:
+    #  name: "🏫 School 🏫"
+    #  description: "Selecteer de entiteit dat weergeeft of het school is of niet
+    #    De entiteit start met `input_boolean.school`."
+    #  # Input requires a single entity from a dropdown menu.
+    #  selector:
+    #    entity:
+    #      multiple: false
 
     # Ask user for the right entity that represents if it is hot or cold outside.
     # This entity is a helper that is assigned by an other automation that uses the 
     # outside temperature and compares it with the given values from the user
     input_winter:
-      name: "🌞-☃️ Zomer/Warm of Winter/Koud weer"
+      name: "🌞-☃️ Warm/Koud Weer"
       description:
         "Zomer of Winter entiteit dat weergeeft of het buiten zomers of winters weer is.
-        Dit kan ook geïnterpreteerd worden als 'Warm weer' of 'Koud weer'. Deze entiteit 
-        moet worden aangemaakt met de automatisatie 'Summer/Winter'."
+        Dit kan ook geïnterpreteerd worden als `'Warm weer'` of `'Koud weer'`. Deze entiteit 
+        moet worden aangemaakt met de automatisatie 'Warm/Koud Weer'."
       # Input requires a single entity from a dropdown menu.
       selector:
         entity:
@@ -129,7 +118,7 @@ blueprint:
 trigger:
   platform: time_pattern
   id: temp_update
-  minutes: !input input_trigger_frequency
+  minutes: "/1"
 
 # Assign variables that will be used throughout the automation that use the 
 # inputs from the user
@@ -138,7 +127,8 @@ variables:
   min_temperature_user: !input input_minimum_temperature
   min_school_temperature_user: !input input_minimum_temperature_school
   current_temp: !input input_tempsensor
-  school: !input input_school
+  #school: !input input_school
+  school: input_boolean.school
   winter: !input input_winter
 
 # This automation does not require any other conditions to trigger
@@ -157,9 +147,14 @@ action:
     choose:
       # Condition to check if the heating can turn OFF
       - conditions:
-          # check if the inside temperature is higher than the maximum allowed temperature
+        - condition: or
+          conditions:
+            # check if the inside temperature is higher than the maximum allowed temperature
           - condition: template
             value_template: "{{ states(current_temp) | float > max_temperature_user }}"
+          - condition: template
+            value_template: "{{ is_state(current_temp, 'unknown') }}"
+
         # If "true", turn OFF the switch that controls the heating
         sequence:
           - service: switch.turn_off
@@ -192,6 +187,7 @@ action:
                     value_template: "{{ is_state(winter, 'on') }}"
                   - condition: template
                     value_template: "{{ is_state(school, 'off') }}"
+
         # Turn OFF the heating switch when 1 condition is returned as "true"
         sequence:
           - service: switch.turn_on
