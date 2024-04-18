@@ -151,10 +151,9 @@ action:
           conditions:
             # check if the inside temperature is higher than the maximum allowed temperature
           - condition: template
-            value_template: "{{ states(current_temp) | float > max_temperature_user }}"
-          - condition: template
             value_template: "{{ is_state(current_temp, 'unknown') }}"
-
+          - condition: template
+            value_template: "{{ states(current_temp) | float > max_temperature_user }}"
         # If "true", turn OFF the switch that controls the heating
         sequence:
           - service: switch.turn_off
