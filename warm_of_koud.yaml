@@ -1,5 +1,5 @@
 blueprint:
-  name: Warm/Koud weer
+  name: Warm/Koud Weer
   description: "Schakel een helper die gebruikt wordt in een andere automatisatie. 
     Deze helper geef weer of het warm of koud weer is. \n Als het koud weer is, zal 
     enkel de ♨️verwarming♨️ gebruikt worden en de koeling niet. \n Als het warm 
@@ -60,12 +60,10 @@ action:
         sequence:
           - service: input_boolean.turn_off
             target:
-              entity_id:
-                - input_helper_user
+              entity_id: !input input_helper
       - conditions:
           - "{{ current_temp <= input_temperature_user}}"
         sequence:
           - service: input_boolean.turn_on
             target:
-              entity_id:
-                - input_helper_user
+              entity_id: !input input_helper
