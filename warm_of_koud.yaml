@@ -53,7 +53,7 @@ condition: []
 
 action:
   - variables:
-      current_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+      current_temp: "{{ state_attr('weather.forecast_apostoliekenstraat', 'temperature') }}"
   - choose:
       - conditions:
           - "{{ current_temp > input_temperature_user}}"
