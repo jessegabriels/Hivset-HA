@@ -1,0 +1,194 @@
+blueprint:
+  name: Dag- en Nacht Koeling met Correct Uitschakelen
+  description: "Regelt de koeling met verschillende temperatuurdrempels voor dag en nacht, en schakelt de koeling uit 5 minuten voor de stoptijd."
+  domain: automation
+  input:
+    input_start:
+      name: "Start Nacht"
+      description: "Starttijd voor de nachtkoeling."
+      default: "22:00:00"
+      selector:
+        time:
+
+    input_stop:
+      name: "Stop Nacht"
+      description: "Stoptijd voor de nachtkoeling. De koeling zal uitschakelen 5 minuten voor deze tijd."
+      default: "06:00:00"
+      selector:
+        time:
+
+    input_day_maximum_temperature:
+      name: "Dag Maximum Temperatuur"
+      description: "Maximumtemperatuur overdag waarbij de koeling actief wordt."
+      default: 25
+      selector:
+        number:
+          min: 12.0
+          max: 40.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    input_day_minimum_temperature:
+      name: "Dag Minimum Temperatuur"
+      description: "Minimumtemperatuur overdag waarbij de koeling uitgaat."
+      default: 18
+      selector:
+        number:
+          min: 6.0
+          max: 25.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    input_night_maximum_temperature:
+      name: "Nacht Maximum Temperatuur"
+      description: "Maximumtemperatuur 's nachts waarbij de koeling actief wordt."
+      default: 20
+      selector:
+        number:
+          min: 12.0
+          max: 40.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    input_night_minimum_temperature:
+      name: "Nacht Minimum Temperatuur"
+      description: "Minimumtemperatuur 's nachts waarbij de koeling uitgaat."
+      default: 15
+      selector:
+        number:
+          min: 6.0
+          max: 25.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    input_winter:
+      name: "🌞-☃️ Warm/Koud weer"
+      description: "Boolean die aangeeft of het buiten zomers of winters weer is. Dit bepaalt of de dagkoeling moet werken."
+      selector:
+        entity:
+          domain: input_boolean
+
+    input_tempsensor:
+      name: "Temperatuur Sensor"
+      description: "Sensor die de binnentemperatuur meet."
+      selector:
+        entity:
+          multiple: false
+
+    input_cooling:
+      name: "Koeling Schakelaar"
+      description: "Apparaat dat de koeling aan of uit zet."
+      selector:
+        entity:
+          multiple: false
+
+    input_next_day:
+      name: "Nacht koeling als volgende dag x graden is."
+      description: "Als het de volgende dag warmer word als deze temperatuur zal de koeling aangaan"
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 40
+          step: 0.5
+          unit_of_measurement: "°C"
+
+trigger:
+  - platform: time
+    at: !input input_stop
+    id: stopnight
+  - platform: time_pattern
+    minutes: "/1"
+    id: refresh
+
+condition: []
+
+variables:
+  day_max_temp: !input input_day_maximum_temperature
+  day_min_temp: !input input_day_minimum_temperature
+  night_max_temp: !input input_night_maximum_temperature
+  night_min_temp: !input input_night_minimum_temperature
+  current_temp: !input input_tempsensor
+  start_night: !input input_start
+  stop_night: !input input_stop
+  winter: !input input_winter
+  next_cool_temp: !input input_next_day
+  outside_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+  next_day: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+  #next_day: "{{ state_attr('weather.forecast_thuis', 'forecast')[0].temperature }}"
+  #weather.forecast_apostoliekenstraat
+
+action:
+  - choose:
+      # Dag Koeling
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ is_state(winter, 'off') }}"
+              - condition: time
+                before: !input input_start
+                after: !input input_stop
+        sequence:
+          - choose:
+              # turn on when the current temperature is higher than the max allowed temperature and outside temperature is lower
+              - conditions:
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float > day_max_temp }}"
+                  - condition: template
+                    value_template: "{{ outside_temp < states(current_temp) | float }}"
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input input_cooling
+              # turn off when the current temperature is lower than the min allowed temperature
+              - conditions:
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float < day_min_temp }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input input_cooling
+              # turn off when the outside temperature is higher than the inside temperature
+              - conditions:
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float > day_max_temp }}"
+                  - condition: template
+                    value_template: "{{ outside_temp > states(current_temp) | float }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input input_cooling
+              # Turn off cooling at the end of the stop time
+              - conditions:
+                  - condition: trigger
+                    id: stopnight
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input input_cooling
+      # Nacht Koeling
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: time
+                after: !input input_start
+                before: !input input_stop
+              - condition: template
+                value_template: "{{ next_day > next_cool_temp }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float > night_max_temp }}"
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input input_cooling
+              - conditions:
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float < night_min_temp }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input input_cooling
