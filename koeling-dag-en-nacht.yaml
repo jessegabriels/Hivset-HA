@@ -119,6 +119,11 @@ variables:
   #weather.forecast_apostoliekenstraat
 
 action:
+  #used for debugging when the automation is not working
+  - service: persistent_notification.create
+    data_template:
+      message: "Next day: {{ next_day }}"
+      title: "Debugging"
   - choose:
       # Dag Koeling
       - conditions:
