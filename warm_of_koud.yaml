@@ -6,6 +6,10 @@ blueprint:
     weer is, zal enkel de ❄️koeling❄️ gebruikt worden en de verwarming niet."
   domain: automation
   input:
+    # Ask user for a time input. it should always be '/' followed by a number.
+    # This number is used to re-run the automation every X minutes. Default is 
+    # set to 'every 10 minutes of every hour'. This way the automation can keep 
+    # updating and can give accurate output if it is hot or cold
     input_trigger_frequency:
       name: "⏱️Trigger Frequentie⏱️"
       description:
@@ -15,7 +19,10 @@ blueprint:
       default: "/10"
       selector:
         text:
-
+    
+    # Ask the user for a temperature. If the current ouside temperature is higher 
+    # than the user input, the output will be "Warm". If the outside temperature 
+    # is lower than the user input, the output will be "Koud"
     input_temperature:
       name: "🌡️Temperatuur Drempelwaarde🌡️"
       description: "Geef een drempelwaarde voor de temperatuur mee. \n Als de 
@@ -31,6 +38,8 @@ blueprint:
           mode: box
           unit_of_measurement: "°C"
 
+    # Ask the user for the correct helper that was made before making this automation
+    # This helper is used in the other automation to descisde if it is hot or cold weather.
     input_helper:
       name: "🔧Helper🔧"
       description: "❗Maak eerst een helper aan die gebruikt kan worden voor het 
@@ -40,6 +49,7 @@ blueprint:
         entity:
           multiple: false
 
+# Use the time input that the user gave to re-run this automation
 trigger:
   platform: time_pattern
   id: temp_update
@@ -53,14 +63,21 @@ condition: []
 
 action:
   - variables:
-      current_temp: "{{ state_attr('weather.forecast_apostoliekenstraat', 'temperature') }}"
+      # Make a variable that reads the outside temperature from the weather integration.
+      # This integration is pre installed on every Home Assistant
+      current_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
   - choose:
+      # if the current temperature (outside) is higher than the number that the user gave,
+      # the output will be "Warm" and the boolean switch will be turned off
       - conditions:
           - "{{ current_temp > input_temperature_user}}"
         sequence:
           - service: input_boolean.turn_off
             target:
               entity_id: !input input_helper
+
+      # if the current temperature (outside) is lower than the number that the user gave,
+      # the output will be "Koud" and the boolean switch wiil be turned on
       - conditions:
           - "{{ current_temp <= input_temperature_user}}"
         sequence:
