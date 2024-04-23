@@ -35,7 +35,6 @@ blueprint:
           min: 4.0
           max: 75.0
           step: 0.5
-          mode: box
           unit_of_measurement: "°C"
 
     # Ask the user for the correct helper that was made before making this automation
