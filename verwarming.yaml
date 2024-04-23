@@ -85,6 +85,9 @@ blueprint:
       selector:
         entity:
           multiple: false
+
+    # THIS INPUT CAN BE LEFT OUT SINCE HIVSET'S HOME ASSISTANT ALREADY HAS THIS 
+    # ENTITY AND IS THE ONLY ONE PRESENT
     
     # Ask user for the right entity that represents if it is school or not.
     # This entity is a helper that is assigned by an other automation that is 
@@ -150,6 +153,8 @@ action:
         - condition: or
           conditions:
             # check if the inside temperature is higher than the maximum allowed temperature
+            # or check if the connection with the sensor is lost, in that case the measurements
+            # will be shown as 'unknown'
           - condition: template
             value_template: "{{ is_state(current_temp, 'unknown') }}"
           - condition: template
