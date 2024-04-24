@@ -150,7 +150,7 @@ variables:
   stop_night: !input input_stop
   winter: !input input_winter
   next_cool_temp: !input input_next_day
-  outside_temp: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
+  outside_temp: "{{ state_attr('weather.forecast_apostoliekenstraat', 'temperature') }}"
   #next_day: "{{ state_attr('weather.forecast_thuis', 'temperature') }}"
   next_day: "{{ state_attr('weather.forecast_apostoliekenstraat', 'forecast')[0].temperature }}"
   #weather.forecast_apostoliekenstraat
