@@ -214,7 +214,7 @@ action:
                   - condition: template
                     value_template: "{{ is_state(verhuur, 'on') }}"
                   - condition: template
-                    value_template: "{{ states(current_temp) | float < min_temperature_user }}"
+                    value_template: "{{ states(current_temp) | float < min_school_temperature_user }}"
                   - condition: template
                     value_template: "{{ is_state(winter, 'on') }}"
 
