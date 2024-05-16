@@ -23,7 +23,7 @@ blueprint:
       selector:
         number:
           min: 12.0
-          max: 40.0
+          max: 30.0
           step: 0.5
           unit_of_measurement: "°C"
     
@@ -112,6 +112,21 @@ blueprint:
       selector:
         entity:
           multiple: false
+          domain: input_boolean
+
+    # Ask user for the right entity that represents the correct Google Calendar for rent.
+    # This entity is a helper that is assigned by an other automation that uses the google calender
+    input_verhuur:
+      name: "🏢 Verhuur 🏢"
+      description:
+        "Selectuur de juiste verhuur kalender. Dit kan voor de cafetaria, 
+        sporthol of E- en H blok zijn. De verwarming zal een uur voor de start aangaan."
+      selector:
+        entity:
+          multiple: false
+          domain: input_boolean
+
+    
 
 # Specify what triggers this automation. In this case it is a time patern that 
 # uses the input from the user "input_trigger_frequency"
@@ -130,18 +145,13 @@ variables:
   #school: !input input_school
   school: input_boolean.school
   winter: !input input_winter
+  verhuur: !input input_verhuur
 
 # This automation does not require any other conditions to trigger
 condition: []
 
 # Specify the action that should run when the automation is triggered
 action:
-  #used for debugging when the automation is not working
-  #- service: persistent_notification.create
-  #  data_template:
-  #    message: "Current Temperature: {{ states(current_temp) | float }}, Max Temperature: {{ max_temperature_user }}"
-  #    title: "Debugging"
-
   - alias: "Heating"
     # Initialize different choices to make based on certain conditions
     choose:
@@ -156,6 +166,14 @@ action:
             value_template: "{{ is_state(current_temp, 'unknown') }}"
           - condition: template
             value_template: "{{ states(current_temp) | float > max_temperature_user }}"
+          - condition: template
+            value_template: "{{ is_state(winter, 'off') }}"
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: "{{ is_state(school, 'off') }}"
+              - condition: template
+                value_template: "{{ is_state(verhuur, 'off') }}"
         # If "true", turn OFF the switch that controls the heating
         sequence:
           - service: switch.turn_off
@@ -183,11 +201,22 @@ action:
               - condition: and
                 conditions:
                   - condition: template
-                    value_template: "{{ states(current_temp) | float < min_school_temperature_user }}"
+                    value_template: "{{ states(current_temp) | float < min_temperature_user }}"
                   - condition: template
                     value_template: "{{ is_state(winter, 'on') }}"
                   - condition: template
                     value_template: "{{ is_state(school, 'off') }}"
+              
+              # Third AND condition that checks if the space is rented. And that the temperature
+              # is lower than the minimum temperature.
+              - condition: and
+                conditions:
+                  - condition: template
+                    value_template: "{{ is_state(verhuur, 'on') }}"
+                  - condition: template
+                    value_template: "{{ states(current_temp) | float < min_temperature_user }}"
+                  - condition: template
+                    value_template: "{{ is_state(winter, 'on') }}"
 
         # Turn OFF the heating switch when 1 condition is returned as "true"
         sequence:
